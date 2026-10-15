@@ -48,33 +48,19 @@ public class PlayerCombatController : NetworkBehaviour
     {
         if (GetInput(out NetworkInputData data))
         {
-            // Attack input (Space key)
             if (data.attackPressed && Object.HasInputAuthority)
             {
-                Debug.Log("[SERVER] Получен сетевой инпут атаки.");
-                if (CanStartAttack())
-                {
-                    Debug.Log("Starting attack.");
-                    TryStartAttack();
-                }
+                if (CanStartAttack()) TryStartAttack();
             }
 
-            // Dice Roll (R key)
-            if (data.diceRollPressed)
+            if (data.diceRollPressed && DiceRoller.Instance != null)
             {
-                if (DiceRoller.Instance != null)
-                {
-                    DiceRoller.Instance.RequestRollDice();
-                }
+                DiceRoller.Instance.RequestRollDice();
             }
 
-            // Turn end (Enter key)
-            if (data.endTurnPressed)
+            if (data.endTurnPressed && GameSession.Instance != null)
             {
-                if (GameSession.Instance != null)
-                {
-                    GameSession.Instance.RPC_RequestEndTurn();
-                }
+                GameSession.Instance.RPC_RequestEndTurn();
             }
         }
     }

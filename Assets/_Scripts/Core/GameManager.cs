@@ -9,8 +9,8 @@ public class GameManager : NetworkBehaviour
     public enum GameState
     {
         MainMenu = 0,
-        Playing = 1,  // Exploration Mode
-        Combat = 2,   // Turn-Based Combat Loop
+        Playing = 1,
+        Combat = 2,
         Lost = 3,
         Won = 4,
     }
@@ -91,7 +91,7 @@ public class GameManager : NetworkBehaviour
         if (HasStateAuthority)
         {
             CurrentState = newState;
-            Debug.Log($"[SERVER STATE CHANGER] Authority verified. State updated to: {newState}");
+            Debug.Log($"Authority verified. State updated to: {newState}");
         }
     }
 
@@ -121,11 +121,11 @@ public class GameManager : NetworkBehaviour
 
     public void HandleExploration()
     {
+        Debug.Log("Handling exploration mode.");
         Time.timeScale = 1f;
 
         // Allow local movement, unlock player input states natively
         PlayerInputHandler.IsMyTurn = true;
-        PlayerInputHandler.IsUIActive = true;
 
         ShopUIManager.Instance?.ToggleShop(false);
     }
@@ -134,7 +134,7 @@ public class GameManager : NetworkBehaviour
     {
         Time.timeScale = 1f;
 
-        PlayerInputHandler.IsMyTurn = false;
+        PlayerInputHandler.IsMyTurn = true;
         PlayerInputHandler.IsUIActive = true;
     }
 

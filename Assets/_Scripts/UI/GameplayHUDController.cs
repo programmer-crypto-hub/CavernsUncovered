@@ -44,25 +44,18 @@ public class GameplayHUDController : MonoBehaviour
         UnbindEvents();
     }
 
-    // Единственный метод для безопасного покадрового обновления UI во Fusion 2
     private void Render()
     {
         ResolveSourcesIfNeeded();
-
-        // Если сетевой клон игрока еще не готов или это фантом — не трогаем UI
         if (playerStats == null || playerStats.Object == null || !playerStats.Object.IsValid) return;
-
-        // Как только сеть готова, лениво подписываемся на события изменения статов
         if (!_isBound)
         {
             BindEvents();
         }
 
-        // БЕЗОПАСНЫЙ НАКАДРОВЫЙ REFRESH (Обновление без падения консоли)
         float maxHp = playerStats.playerData != null ? playerStats.playerData.maxHealth : 100f;
         UpdateHealthUI(playerStats.CurrentHealth, maxHp);
 
-        // Обновляем золото (в вашем старом коде ивенты передавали только текущее золото)
         if (playerStats.playerData != null)
         {
             UpdateGoldUI(playerStats.playerData.caveCoins, playerStats.playerData.maxCaveCoins);
@@ -148,23 +141,18 @@ public class GameplayHUDController : MonoBehaviour
     private void UpdateHealthUI(float current, float max)
     {
         if (hpFillImage == null) return;
-
-        // Заполняем картинку-сердце вертикально (значение от 0f до 1f)
         hpFillImage.fillAmount = max > 0.01f ? Mathf.Clamp01(current / max) : 0f;
     }
 
     public void UpdateEnemyHealthUI(float current, float max)
     {
         if (enemyHealthFillImage == null) return;
-        // Заполняем картинку-сердце вертикально (значение от 0f до 1f)
         enemyHealthFillImage.fillAmount = max > 0.01f ? Mathf.Clamp01(current / max) : 0f;
     }   
 
     private void UpdateExperienceUI(float current, float required)
     {
         if (xpFillImage == null) return;
-
-        // Заполняем полоску опыта горизонтально (значение от 0f до 1f)
         xpFillImage.fillAmount = required > 0.01f ? Mathf.Clamp01(current / required) : 0f;
     }
 
@@ -177,9 +165,6 @@ public class GameplayHUDController : MonoBehaviour
     private void UpdateLevelUI(int level)
     {
         if (playerProgression == null) return;
-        /* 
-         * Usage: Manage level text 
-         */
 
         int displayLevel = playerProgression.CurrentLevel;
         if (displayLevel >= playerProgression.maxLevel)
@@ -192,10 +177,6 @@ public class GameplayHUDController : MonoBehaviour
             levelValueText.text = $"Level: {displayLevel.ToString()}";
         }
 
-        /* 
-         * Usage: Manage XP Bar 
-         * Identifying Current Index / XpToNextLevel 
-         */
         if (xpFillImage != null)
         {
             float requiredXP = playerProgression.GetRequiredXPForNextLevel();

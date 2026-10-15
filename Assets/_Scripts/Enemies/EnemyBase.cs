@@ -53,9 +53,9 @@ public class EnemyBase : NetworkBehaviour, IDamageable
         _isActionInProgress = true;
         _enemyReturnPosition = transform.position; 
 
-        if (_target == null) FindClosestPlayer();
         if (_target == null)
         {
+            FindClosestPlayer();
             FinishTurnSequence();
             yield break;
         }
@@ -78,9 +78,8 @@ public class EnemyBase : NetworkBehaviour, IDamageable
 
                 if (direction != Vector3.zero)
                 {
-                    Quaternion rawLook = Quaternion.LookRotation(direction);
-                    const float x = -90f; const float z = 0f;
-                    transform.rotation = Quaternion.Euler(x, z, z);
+                    Vector3 flatLook = Quaternion.LookRotation(direction).eulerAngles;
+                    transform.rotation = Quaternion.Euler(-90f, flatLook.y, 0f);
                 }
 
                 distanceToTarget = Vector3.Distance(transform.position, _target.position);
@@ -96,7 +95,6 @@ public class EnemyBase : NetworkBehaviour, IDamageable
             if (_target.TryGetComponent<IDamageable>(out var player))
             {
                 player.TakeDamage(enemyData != null ? enemyData.damage : 15f);
-                Debug.LogWarning($"[COMBAT SUCCESS] Монстр нанес урон игроку перед его лицом!");
             }
         }
 
@@ -118,8 +116,8 @@ public class EnemyBase : NetworkBehaviour, IDamageable
             facePlayerDir.y = 0f;
             if (facePlayerDir != Vector3.zero)
             {
-                const float x = -90f; const float y = 90f;
-                transform.rotation = Quaternion.Euler(x, x, y);
+                Vector3 flatLook = Quaternion.LookRotation(facePlayerDir).eulerAngles;
+                transform.rotation = Quaternion.Euler(-90f, flatLook.y, 90f);
             }
         }
 
@@ -135,8 +133,8 @@ public class EnemyBase : NetworkBehaviour, IDamageable
 
         if (GameSession.Instance != null && Object.HasStateAuthority)
         {
-            GameSession.Instance.RPC_RequestEndTurn();
-            Debug.LogWarning("[TURN SYSTEM] Действие монстра завершено, ход возвращен игрокам!");
+            GameSession.Instance.AdvanceFromBossTurn();
+            Debug.LogWarning("Boss finished its turn.");
         }
     }
 

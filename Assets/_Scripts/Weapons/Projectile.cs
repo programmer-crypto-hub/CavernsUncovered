@@ -2,20 +2,9 @@ using UnityEngine;
 
 public class Projectile : MonoBehaviour
 {
-    [Tooltip("Скорость полёта снаряда (единиц в секунду).")]
-    [SerializeField]
     private float speed = 20f;
-
-    [Tooltip("Максимальная дистанция, после которой снаряд уничтожается.")]
-    [SerializeField]
     private float maxDistance = 20f;
-
-    [Tooltip("Урон, который этот снаряд должен нанести при попадании.")]
-    [SerializeField]
     private float damage = 10f;
-
-    [Tooltip("Слои, по которым может быть нанесён урон.")]
-    [SerializeField]
     private LayerMask hitLayers;
 
     public void Setup(float damage, float maxDistance, float speed, LayerMask hitLayers)
@@ -37,7 +26,6 @@ public class Projectile : MonoBehaviour
     {
         transform.position += transform.forward * (speed * Time.deltaTime);
 
-        // Проверяем пройденную дистанцию
         float traveled = Vector3.Distance(_startPosition, transform.position);
         if (traveled >= maxDistance)
         {
@@ -50,14 +38,11 @@ public class Projectile : MonoBehaviour
         if ((hitLayers.value & (1 << other.gameObject.layer)) == 0)
             return;
 
-        Debug.Log($"Снаряд попал в {other.name}, потенциальный урон: {damage}");
-
         IDamageable damageable = other.GetComponent<IDamageable>();
         if (damageable == null)
             damageable = other.GetComponentInParent<IDamageable>();
 
-        if (damageable != null)
-            damageable.TakeDamage(damage);
+        else damageable.TakeDamage(damage);
 
         Destroy(gameObject);
     }

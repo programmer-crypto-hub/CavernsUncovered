@@ -12,8 +12,7 @@ public class BossController : EnemyBase
         if (GameSession.Instance != null)
         {
             bossID = (int)(Object.Id.Raw) + 1000;
-            GameSession.Instance.RegisterParticipant(bossID, "Boss");
-            Debug.LogWarning($"[BOSS INITIATIVE] Босс {gameObject.name} успешно занял слот в очереди ходов! ID: {bossID}");
+            GameSession.Instance.RegisterBoss(bossID);
             if (GameplayHUDController.Instance != null) base.HealthBar = GameplayHUDController.Instance.enemyHealthFillImage;
             AttackCooldown = default;
         }
@@ -21,9 +20,7 @@ public class BossController : EnemyBase
 
     public override void FixedUpdateNetwork()
     {
-        if (Runner == null || !Runner.IsServer || IsDead) return;
-
-        if (_isActionInProgress) return;
+        if (Runner == null || !Runner.IsServer || IsDead || _isActionInProgress) return;
 
         if (GameSession.Instance == null || GameSession.Instance.CurrentTurnID != bossID)
         {

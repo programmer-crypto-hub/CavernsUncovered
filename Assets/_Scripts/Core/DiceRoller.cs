@@ -18,7 +18,6 @@ public class DiceRoller : NetworkBehaviour
     {
         if (GetComponent<NetworkObject>().Runner.IsServer)
         {
-            // Бросаем кубик d20 (от 1 до 20)
             DiceRollResult = UnityEngine.Random.Range(1, 21);
 
             GameManager.Instance.RaiseEvent(GameManager.Events.OnDiceRolled, DiceRollResult);

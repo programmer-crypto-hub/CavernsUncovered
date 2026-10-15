@@ -5,7 +5,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class BasicPlayerSpawner : NetworkBehaviour, INetworkRunnerCallbacks
+public class BasicPlayerSpawner : MonoBehaviour, INetworkRunnerCallbacks
 {
     [SerializeField] private NetworkObject _playerPrefab;
     [SerializeField] private GameObject gameManagerNetworkPrefab;
@@ -13,12 +13,12 @@ public class BasicPlayerSpawner : NetworkBehaviour, INetworkRunnerCallbacks
     private NetworkRunner _runner;
     private Dictionary<PlayerRef, NetworkObject> _spawnedCharacters = new Dictionary<PlayerRef, NetworkObject>();
 
+    private bool _gameManagerSpawned = false;
     // Kicked off by a UI Button
     public void StartHostFromButton()
     {
-        if (_runner != null) return; // Already running, ignore extra clicks
-
-        StartGame(GameMode.Host);
+        if (_runner != null) return;
+        StartGame(GameMode.AutoHostOrClient);
     }
 
     private async void StartGame(GameMode mode)
@@ -71,9 +71,11 @@ public class BasicPlayerSpawner : NetworkBehaviour, INetworkRunnerCallbacks
 
     public void OnPlayerJoined(NetworkRunner runner, PlayerRef player)
     {
-        if (SceneLoader.Instance != null) SceneLoader.Instance.LoadScene(); // Load loading screen
-        if (!runner.IsServer) return;
-        if (_spawnedCharacters.ContainsKey(player)) return; // Prevent duplicate spawns
+        if (player == runner.LocalPlayer)
+        {
+            if (SceneLoader.Instance != null) SceneLoader.Instance.LoadScene();
+        }
+        if (!runner.IsServer || _spawnedCharacters.ContainsKey(player)) return;
 
         Vector3 spawnPos = new Vector3((player.RawEncoded % 5) * 2f, 0f, 0f);
         Quaternion spawnRotation = Quaternion.Euler(-90f, 0f, 0f);
@@ -94,7 +96,10 @@ public class BasicPlayerSpawner : NetworkBehaviour, INetworkRunnerCallbacks
 
     public void OnSceneLoadDone(NetworkRunner runner)
     {
-        if (runner.IsServer) runner.Spawn(gameManagerNetworkPrefab, Vector3.zero, Quaternion.identity);
+        if (!runner.IsServer) return;
+        if (_gameManagerSpawned) return;
+        runner.Spawn(gameManagerNetworkPrefab, Vector3.zero, Quaternion.identity);
+        _gameManagerSpawned = true;
     }
     public void OnPlayerLeft(NetworkRunner runner, PlayerRef player)
     {

@@ -5,7 +5,6 @@ using Fusion;
 public class PlayerInputHandler : MonoBehaviour
 {
     // Local flags to track button presses for the current frame
-    private bool _jumpTriggered;
     private bool _attackTriggered;
     private bool _interactPressed;
     private bool _diceRollTriggered;
@@ -23,12 +22,10 @@ public class PlayerInputHandler : MonoBehaviour
         // Read the keyboard and mouse states without using the new Input System
         var keyboard = Keyboard.current;
         var mouse = Mouse.current;
+        Debug.Log($"Keyboard: {keyboard}, Mouse: {mouse}, IsMyTurn: {IsMyTurn}");
+        if (keyboard == null || !IsMyTurn) return;
 
-        if (keyboard == null) return;
-
-        if (IsUIActive) return; if (IsMyTurn) return;
         // Fixate key presses (analogous to GetKeyDown)
-        if (keyboard.spaceKey.wasPressedThisFrame) _jumpTriggered = true;
         if (keyboard.aKey.wasPressedThisFrame) _attackTriggered = true;
         if (keyboard.eKey.wasPressedThisFrame) _interactPressed = true;
         if (keyboard.rKey.wasPressedThisFrame) _diceRollTriggered = true;
@@ -46,20 +43,7 @@ public class PlayerInputHandler : MonoBehaviour
 
     public void PopulatedNetworkInput(out NetworkInputData data)
     {
-        data = new NetworkInputData();
-
-        var keyboard = Keyboard.current;
-        if (keyboard != null)
-        {
-            // Non-stop movement input (analogous to GetKey)
-            if (keyboard.wKey.isPressed) data.direction += Vector3.forward;
-            if (keyboard.sKey.isPressed) data.direction += Vector3.back;
-            if (keyboard.aKey.isPressed) data.direction += Vector3.left;
-            if (keyboard.dKey.isPressed) data.direction += Vector3.right;
-        }
-
         // Send the local flags to the network input data
-        data.jumpPressed = _jumpTriggered;
         data.attackPressed = _attackTriggered;
         data.interactPressed = _interactPressed;
         data.diceRollPressed = _diceRollTriggered;
@@ -70,7 +54,6 @@ public class PlayerInputHandler : MonoBehaviour
         data.mouseRightClick = _mouseRightTriggered;
 
         // Reset local flags after sending to network
-        _jumpTriggered = false;
         _attackTriggered = false;
         _interactPressed = false;
         _diceRollTriggered = false;

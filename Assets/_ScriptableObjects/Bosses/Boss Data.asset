@@ -13,7 +13,8 @@ MonoBehaviour:
   m_Name: Boss Data
   m_EditorClassIdentifier: Assembly-CSharp::EnemyData
   enemyName: Boss
-  enemyType: 2
+  enemyType: 3
+  healthTier: 3
   maxHealth: 200
   moveSpeed: 400
   damage: 25

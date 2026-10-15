@@ -23,6 +23,7 @@ public class EnemyData : ScriptableObject
     public string enemyName = "New Enemy";
 
     public EnemyTypeByWeapons enemyType;
+    public EnemyTypeByHealth healthTier;
 
     [Min(1f)]
     public float maxHealth = 200f;

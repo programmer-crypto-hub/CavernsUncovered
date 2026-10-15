@@ -1,5 +1,5 @@
 using Fusion;
-using System;
+using System.Collections;
 using UnityEngine;
 public class PlayerStats : NetworkBehaviour
 {
@@ -118,6 +118,11 @@ public class PlayerStats : NetworkBehaviour
             CurrentHealth = MaxHealth;
             Gold = (int)playerData.caveCoins;
         }
+        if (Object.HasInputAuthority)
+        {
+            Runner.SetPlayerObject(Runner.LocalPlayer, Object);
+            StartCoroutine(RegisterWhenReady());
+        }
 
         // Subscribe to Role changes
         if (PlayerRolesController.Instance != null)
@@ -125,9 +130,12 @@ public class PlayerStats : NetworkBehaviour
             GameManager.Instance.RaiseEvent(GameManager.Events.OnRoleGiven);
         }
         isNetworkReady = true;
-        if (GameSession.Instance != null && GameSession.Instance.isNetworkReady) GameSession.Instance.RegisterParticipant((int)Object.Id.Raw, "Player");
     }
-
+    private IEnumerator RegisterWhenReady()
+    {
+        yield return new WaitUntil(() => GameSession.Instance != null);
+        GameSession.Instance.RPC_RegisterPlayer((int)Object.Id.Raw);
+    }
     public void ApplyLevelUpBonuses(int healthBonus, float caveCoinsBonus)
     {
         if (!HasStateAuthority) return; // Only the server calculates the level up

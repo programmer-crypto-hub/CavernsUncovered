@@ -5,22 +5,20 @@ using UnityEngine;
 public class RoomEncounterHandler : NetworkBehaviour
 {
     public static RoomEncounterHandler Instance { get; private set; }
-    [Header("Encounter Settings")]
-    [SerializeField] private NetworkObject enemyPrefab;
-    [SerializeField] private int enemyCount = 1; 
-    [SerializeField] public Transform[] spawnPoints;
-    [SerializeField] private EnemyData enemyData;
+    [SerializeField] private EnemyData.EnemyTypeByHealth roomTier;
 
-    [Header("Presentation Visuals")]
+    [SerializeField] private EnemyData[] possibleEnemies;
+
+    [SerializeField] private int enemyCount = 1;
+    [SerializeField] public Transform[] spawnPoints;
+
     [SerializeField] private NetworkObject roomDoors;
     [SerializeField] private NetworkObject rewardChestPrefab;
     [SerializeField] private Transform chestSpawnPoint;
 
-    [Header("Cinematic Presentation")]
     [SerializeField] private Animator staticChestAnimator;
     [SerializeField] private GameObject enemyPanel;
 
-    [Header("State")]
     [Networked, OnChangedRender(nameof(OnEncounterStateChanged))]
     public NetworkBool EncounterTriggered { get; set; }
 
@@ -31,7 +29,7 @@ public class RoomEncounterHandler : NetworkBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        //if (!HasStateAuthority) return;
+        if (!HasStateAuthority || EncounterTriggered) return;
 
         if (other.CompareTag("Player"))
         {
@@ -42,9 +40,18 @@ public class RoomEncounterHandler : NetworkBehaviour
 
     private void StartEncounter()
     {
+        if (EncounterTriggered) return; // defensive: never spawn a second wave
+
         if (spawnPoints == null || spawnPoints.Length == 0)
         {
             Debug.LogError("No spawn points assigned!");
+            return;
+        }
+
+        List<EnemyData> eligible = GetEligibleEnemies();
+        if (eligible.Count == 0)
+        {
+            Debug.LogError($"RoomEncounterHandler: no possibleEnemies match roomTier {roomTier}. Assign at least one matching EnemyData.", this);
             return;
         }
 
@@ -58,20 +65,51 @@ public class RoomEncounterHandler : NetworkBehaviour
         for (int i = 0; i < enemyCount; i++)
         {
             Transform targetPoint = spawnPoints[i % spawnPoints.Length];
-
             Vector3 transRot = new Vector3(-90, 0, 0);
-            NetworkObject instance = Runner.Spawn(enemyPrefab, targetPoint.position, Quaternion.Euler(transRot), Runner.LocalPlayer);
+
+            EnemyData chosen = eligible[UnityEngine.Random.Range(0, eligible.Count)];
+            if (chosen.prefab == null)
+            {
+                Debug.LogError($"RoomEncounterHandler: EnemyData '{chosen.enemyName}' has no prefab assigned.", this);
+                continue;
+            }
+
+            // PlayerRef.None: no client has input authority over an AI enemy.
+            NetworkObject instance = Runner.Spawn(chosen.prefab, targetPoint.position, Quaternion.Euler(transRot), PlayerRef.None);
 
             if (instance != null)
             {
                 spawnedEnemies.Add(instance);
 
                 if (instance.TryGetComponent<EnemyBase>(out var baseEnemy))
-                {
-                    baseEnemy.CurrentHP = enemyData != null ? enemyData.maxHealth : 100f;
-                }
+                    baseEnemy.CurrentHP = chosen.maxHealth;
             }
         }
+    }
+
+    // Same rule EnemyEncounter used: a room can host its own tier, and a
+    // Medium room can also host Basic enemies as filler.
+    private List<EnemyData> GetEligibleEnemies()
+    {
+        var result = new List<EnemyData>();
+        if (possibleEnemies == null) return result;
+
+        foreach (var candidate in possibleEnemies)
+        {
+            if (candidate == null) continue;
+
+            bool matches = roomTier switch
+            {
+                EnemyData.EnemyTypeByHealth.Basic => candidate.healthTier == EnemyData.EnemyTypeByHealth.Basic,
+                EnemyData.EnemyTypeByHealth.Medium => candidate.healthTier == EnemyData.EnemyTypeByHealth.Basic
+                                                    || candidate.healthTier == EnemyData.EnemyTypeByHealth.Medium,
+                EnemyData.EnemyTypeByHealth.Boss => candidate.healthTier == EnemyData.EnemyTypeByHealth.Boss,
+                _ => false
+            };
+
+            if (matches) result.Add(candidate);
+        }
+        return result;
     }
 
     public override void FixedUpdateNetwork()
@@ -96,7 +134,7 @@ public class RoomEncounterHandler : NetworkBehaviour
         if (staticChestAnimator != null)
         {
             staticChestAnimator.SetTrigger("open_trig");
-            Debug.LogWarning("[CHEST VISUAL] Called staticChestAnimator.SetTrigger('open_trig')");
+            Debug.LogWarning("Called staticChestAnimator.SetTrigger('open_trig')");
         }
 
         enemyPanel.SetActive(false);
@@ -118,47 +156,28 @@ public class RoomEncounterHandler : NetworkBehaviour
         }
 
         ShopItem luckyDrop = shopManager.allItems[UnityEngine.Random.Range(0, shopManager.allItems.Count)];
-        int itemID = luckyDrop.itemID; 
+        int itemID = luckyDrop.itemID;
+        int targetSlotIndex = -1;
 
-        int dropQuantity = 1; 
-
-        if (itemID == 22)
+        for (int i = 20; i < 30; i++)
         {
-            dropQuantity = 5;
-        }
-        else if (itemID >= 31 && itemID <= 34)
-        {
-            dropQuantity = 2;
+            if (playerNetObj.InventoryItemIDs[i] == 0) { targetSlotIndex = i; break; }
         }
 
-        for (int q = 0; q < dropQuantity; q++)
+        if (targetSlotIndex == -1)
         {
-            int targetSlotIndex = -1;
-
-            for (int i = 20; i < 30; i++)
+            for (int i = 0; i < 20; i++)
             {
                 if (playerNetObj.InventoryItemIDs[i] == 0) { targetSlotIndex = i; break; }
             }
-
-            if (targetSlotIndex == -1)
-            {
-                for (int i = 0; i < 20; i++)
-                {
-                    if (playerNetObj.InventoryItemIDs[i] == 0) { targetSlotIndex = i; break; }
-                }
-            }
-
-            if (targetSlotIndex != -1)
-            {
-                playerNetObj.InventoryItemIDs.Set(targetSlotIndex, itemID);
-                Debug.Log($"Item {q + 1} of name {luckyDrop.itemName} with ID: {itemID} was assigned to slot {targetSlotIndex}!");
-            }
-            else
-            {
-                Debug.LogError($"Slot wasn't found for item {q + 1}.");
-                break; 
-            }
         }
+
+        if (targetSlotIndex != -1)
+        {
+            playerNetObj.InventoryItemIDs.Set(targetSlotIndex, itemID);
+            Debug.Log($"Item 1 of name {luckyDrop.itemName} with ID: {itemID} was assigned to slot {targetSlotIndex}!");
+        }
+        else Debug.LogError($"Slot wasn't found for item 1.");
 
         RPC_RefreshLocalInventoryUI();
     }
